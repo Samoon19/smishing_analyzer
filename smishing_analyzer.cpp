@@ -34,8 +34,6 @@ public:
         cout << "Received At: " << timeStamp << endl;
         cout << "Risk Score: " << riskScore << endl;
     }
-};
-
 
     // abstract method → makes SMSAnalyzer abstract
     virtual void analyze() = 0;
@@ -440,5 +438,6 @@ int main() {
 
     return 0;
 }
+
 
 
