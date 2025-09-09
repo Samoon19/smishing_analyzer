@@ -34,11 +34,10 @@ public:
         cout << "Received At: " << timeStamp << endl;
         cout << "Risk Score: " << riskScore << endl;
     }
-
-    // abstract method → makes SMSAnalyzer abstract
-    virtual void analyze() = 0;
-    virtual ~SMSAnalyzer() = default; // Virtual destructor for proper cleanup
+     virtual ~SMSAnalyzer() = default; // Virtual destructor for proper cleanup
+     virtual void analyze() = 0;
 };
+
 
 // ================== Derived Class: KeywordMatcher ================== //
 class KeywordMatcher : public virtual SMSAnalyzer {
@@ -211,6 +210,7 @@ void SenderAnalyzer::analyze() {
 }
 
 // ================== Multiple Derived Class: Reporter ================== //
+// ================== Multiple Derived Class: Reporter ================== //
 class Reporter : protected SenderAnalyzer,
                  protected LinkAnalyzer,
                  protected KeywordMatcher {
@@ -220,10 +220,10 @@ protected:
     map<string, int> componentScores;
 
 public:
-    Reporter(string sender, string text, string time); // Fixed parameter order
+    Reporter(string sender, string text, string time); 
     void setReportFormat(const string& format);
-    string generateReport();
-    void displayReport() const;
+    string generateReport() const;
+    void displayReport() const;  // fixed: stays void
     void collectScores(int keywordScore, int linkScore, int senderScore);
     void analyze() override;
 };
@@ -249,7 +249,7 @@ void Reporter::collectScores(int keywordScore, int linkScore, int senderScore) {
     setRiskScore(total);
 }
 
-string Reporter::generateReport() {
+string Reporter::generateReport() const {
     ostringstream report;
 
     if (reportFormat == "JSON") {
@@ -258,9 +258,9 @@ string Reporter::generateReport() {
                << "  \"Timestamp\": \"" << getTimestamp() << "\",\n"
                << "  \"RiskScore\": " << getRiskScore() << ",\n"
                << "  \"ComponentScores\": {\n"
-               << "    \"Keyword\": " << componentScores["Keyword"] << ",\n"
-               << "    \"Link\": " << componentScores["Link"] << ",\n"
-               << "    \"Sender\": " << componentScores["Sender"] << "\n"
+               << "    \"Keyword\": " << componentScores.at("Keyword") << ",\n"
+               << "    \"Link\": " << componentScores.at("Link") << ",\n"
+               << "    \"Sender\": " << componentScores.at("Sender") << "\n"
                << "  },\n"
                << "  \"Summary\": \"" << analysisSummary << "\"\n"
                << "}";
@@ -269,18 +269,18 @@ string Reporter::generateReport() {
         report << getSenderID() << ","
                << getTimestamp() << ","
                << getRiskScore() << ","
-               << componentScores["Keyword"] << ","
-               << componentScores["Link"] << ","
-               << componentScores["Sender"] << ","
+               << componentScores.at("Keyword") << ","
+               << componentScores.at("Link") << ","
+               << componentScores.at("Sender") << ","
                << "\"" << analysisSummary << "\"\n";
     } else {
         report << "=== SMS Security Report ===\n";
         report << "Sender: " << getSenderID() << "\n";
         report << "Time: " << getTimestamp() << "\n";
         report << "Risk Score: " << getRiskScore() << "\n";
-        report << "Keyword Score: " << componentScores["Keyword"] << "\n";
-        report << "Link Score: " << componentScores["Link"] << "\n";
-        report << "Sender Score: " << componentScores["Sender"] << "\n";
+        report << "Keyword Score: " << componentScores.at("Keyword") << "\n";
+        report << "Link Score: " << componentScores.at("Link") << "\n";
+        report << "Sender Score: " << componentScores.at("Sender") << "\n";
         report << "Summary: " << analysisSummary << "\n";
     }
     return report.str();
@@ -323,6 +323,7 @@ void Reporter::analyze() {
     analysisSummary = summary.str();
     cout << "\n" << analysisSummary << endl;
 }
+
 
 // ================== EncryptionModule ================== //
 class EncryptionModule {
@@ -438,6 +439,4 @@ int main() {
 
     return 0;
 }
-
-
 
