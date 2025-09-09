@@ -3,35 +3,45 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <regex>
 #include <ctime>
 using namespace std;
 
 
 // ================== Parent Class: SMS ================== //
-#include <iostream>
-#include <string>
-using namespace std;
-
 class SMSAnalyzer {
 public:
     string senderID;
     string analyzerText;
     string timeStamp;
+    int riskScore = 0;
 
-    SMSAnalyzer(string sender, string text) {
-        this->senderID = sender;
-        this->analyzerText = text;
-        time_t now = time(0);
-        char* dt = ctime(&now);
-        this->timeStamp = dt;
+    SMSAnalyzer(string sender, string text, string time)
+    : senderID(sender), analyzerText(text), timeStamp(time) {}
+
+    string getSenderID() const { 
+        return senderID; 
     }
+    string getTimestamp() const { 
+        return timeStamp; 
+    }
+    string getAnalyzerText() const {
+        return analyzerText; 
+    }
+    int getRiskScore() const {
+        return riskScore; 
+    }
+    void setRiskScore(int score) { 
+        riskScore = score; 
+    }
+
 
     void display() {
         cout << "\n--- SMS DETAILS ---" << endl;
         cout << "Sender ID: " << senderID << endl;
         cout << "Message: " << analyzerText << endl;
-        cout << "Received At: " << timeStamp << endl;
-    }
+        cout << "Received At: " << timeStamp << endl;
+    }
 };
 
 class KeywordMatcher : public virtual SMSAnalyzer {
@@ -42,9 +52,9 @@ public:
         "credit", "debit", "insurance", "loan", "bonus", "investment", "otp", "transaction", "hacked", "security"
     };
 
-    KeywordMatcher(string sender, string text) : SMSAnalyzer(sender, text) {}
+    KeywordMatcher(string sender, string text, string time) : SMSAnalyzer(sender, text, time) {}
 
-    void matchKeywords() {
+    void checkKeywords() {
         cout << "\nChecking for suspicious keywords..." << endl;
         bool found = false;
         int count = 0;
@@ -82,7 +92,7 @@ public:
     void loadSuspiciousDomains(const vector<string>& domains);
     vector<string> extractLinks();
     int analyzeLinks();
-    void analyze() override;
+    void analyze();
 };
 
 // LinkAnalyzer Implementation
@@ -92,12 +102,13 @@ LinkAnalyzer::LinkAnalyzer(const string& content, const string& sender, const st
 void LinkAnalyzer::loadSuspiciousDomains(const vector<string>& domains) {
     suspiciousDomains = domains;
 }
+vector<string> flaggedLinks;
 
 vector<string> LinkAnalyzer::extractLinks() {
     extractedLinks.clear();
     regex urlRegex(R"((https?:\/\/[^\s]+))", regex::icase);
     smatch match;
-    string text = getSmsContent();
+    string text = getAnalyzerText();
 
     while (regex_search(text, match, urlRegex)) {
         extractedLinks.push_back(match.str());
@@ -122,9 +133,8 @@ int LinkAnalyzer::analyzeLinks() {
 void LinkAnalyzer::analyze() {
     extractLinks();
     int score = analyzeLinks();
-    setRiskScore(score * 3);  // weight suspicious links higher
+    setRiskScore(score*3);  // weight suspicious links higher
 }
-
 
 
 // ================== Derived Class: SenderAnalyzer ================== //
@@ -139,7 +149,7 @@ public:
     bool checkNumericSender();
     bool checkGenericSender();
     void updateSenderReputation();
-    void analyze() override;
+    void analyze();
 };
 
 // SenderAnalyzer Implementation
@@ -195,7 +205,7 @@ public:
     string generateReport();
     void displayReport() const;
     void collectScores(int keywordScore, int linkScore, int senderScore);
-    void analyze() override;
+    void analyze();
 };
 
 // Reporter Implementation
@@ -366,6 +376,5 @@ int main() {
 
     return 0;
 }
-
 
 
