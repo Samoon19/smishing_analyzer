@@ -7,54 +7,65 @@ using namespace std;
 
 
 // ================== Parent Class: SMS ================== //
-class SMS {
-protected:
-    string smsContent;
-    string senderID;
-    string timestamp;
-    int riskScore;
-    vector<string> flaggedKeywords;
-    vector<string> flaggedLinks;
+#include <iostream>
+#include <string>
+using namespace std;
 
+class SMSAnalyzer {
 public:
-    SMS(const string& content, const string& sender, const string& time);
-    virtual ~SMS() {}
+    string senderID;
+    string analyzerText;
 
-    string getSmsContent() const;
-    void setSmsContent(const string& content);
+    SMSAnalyzer(string sender, string text) {
+        this->senderID = sender;
+        this->analyzerText = text;
+    }
 
-    string getSenderID() const;
-    void setSenderID(const string& sender);
-
-    string getTimestamp() const;
-    void setTimestamp(const string& time);
-
-    int getRiskScore() const;
-    void setRiskScore(int score);
-
-    vector<string> getFlaggedKeywords() const;
-    vector<string> getFlaggedLinks() const;
-
-    virtual void analyze() = 0;
-
-    void displaySummary() const;
+    void display() {
+        cout << "\n--- SMS DETAILS ---" << endl;
+        cout << "Sender ID: " << senderID << endl;
+        cout << "Message: " << analyzerText << endl;
+    }
 };
 
-// ================== Derived Class: KeywordMatcher ================== //
-class KeywordMatcher : public SMS {
-protected:
-    vector<string> keywordList;
-    int keywordMatchCount;
-
+class KeywordMatcher : public virtual SMSAnalyzer {
 public:
-    KeywordMatcher(const string&, const string&, const string&);
-    void loadKeywords(const vector<string>& keywords);
-    int checkKeywords();
-    void analyze() override;
+    string keywords[30] = {
+        "urgent", "win", "verify", "bank", "link", "password", "click", "lottery", "prize", "free",
+        "limited", "offer", "account", "delivery", "failed", "update", "suspend", "confirm", "gift", "money",
+        "credit", "debit", "insurance", "loan", "bonus", "investment", "otp", "transaction", "hacked", "security"
+    };
+
+    KeywordMatcher(string sender, string text) : SMSAnalyzer(sender, text) {}
+
+    void matchKeywords() {
+        cout << "\nChecking for suspicious keywords..." << endl;
+        bool found = false;
+        int count = 0;
+
+        string lowerText = analyzerText;
+        for (int i = 0; i < lowerText.length(); i++) {
+            lowerText[i] = tolower(lowerText[i]);
+        }
+
+        for (int i = 0; i < 30; i++) {
+            if (lowerText.find(keywords[i]) != string::npos) {
+                cout << "Found keyword: " << keywords[i] << endl;
+                found = true;
+                count++;
+            }
+        }
+
+        if (found) {
+            cout << "ALERT: " << count << " suspicious keyword(s) found!" << endl;
+        } else {
+            cout << "No suspicious keywords found." << endl;
+        }
+    }
 };
 
 // ================== Derived Class: LinkAnalyzer ================== //
-class LinkAnalyzer : public SMS {
+class LinkAnalyzer : public virtual SMSAnalyzer {
 protected:
     vector<string> suspiciousDomains;
     vector<string> extractedLinks;
@@ -69,7 +80,7 @@ public:
 };
 
 // ================== Derived Class: SenderAnalyzer ================== //
-class SenderAnalyzer : public SMS {
+class SenderAnalyzer : public virtual SMSAnalyzer {
 protected:
     bool isNumericSender;
     bool isGenericSender;
@@ -84,8 +95,7 @@ public:
 };
 
 // ================== Multiple Derived Class: Reporter ================== //
-class Reporter : protected SenderAnalyzer,
-                 protected LinkAnalyzer,
+class Reporter : protected SenderAnalyzer,              protected LinkAnalyzer,
                  protected KeywordMatcher {
 protected:
     string reportFormat;
@@ -103,7 +113,7 @@ public:
 
 // Reporter Implementation
 Reporter::Reporter(const string& content, const string& sender, const string& time)
-    : SMS(content, sender, time),
+    : SMSAnalyzer(content, sender, time),
       SenderAnalyzer(content, sender, time),
       LinkAnalyzer(content, sender, time),
       KeywordMatcher(content, sender, time),
@@ -269,3 +279,4 @@ int main() {
 
     return 0;
 }
+
