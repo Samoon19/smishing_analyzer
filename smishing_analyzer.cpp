@@ -11,12 +11,13 @@ using namespace std;
 
 // ================== Parent Class: SMS ================== //
 class SMSAnalyzer {
-public:
+protected:
     string senderID;
     string analyzerText;
     string timeStamp;
     int riskScore = 0;
 
+public:
     SMSAnalyzer(string sender, string text, string time)
     : senderID(sender), analyzerText(text), timeStamp(time) {}
 
@@ -31,7 +32,10 @@ public:
         cout << "Sender ID: " << senderID << endl;
         cout << "Message: " << analyzerText << endl;
         cout << "Received At: " << timeStamp << endl;
+        cout << "Risk Score: " << riskScore << endl;
     }
+};
+
 
     // abstract method → makes SMSAnalyzer abstract
     virtual void analyze() = 0;
@@ -436,4 +440,5 @@ int main() {
 
     return 0;
 }
+
 
