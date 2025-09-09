@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <ctime>
 using namespace std;
 
 
@@ -15,17 +16,22 @@ class SMSAnalyzer {
 public:
     string senderID;
     string analyzerText;
+    string timeStamp;
 
     SMSAnalyzer(string sender, string text) {
         this->senderID = sender;
         this->analyzerText = text;
+        time_t now = time(0);
+        char* dt = ctime(&now);
+        this->timeStamp = dt;
     }
 
     void display() {
         cout << "\n--- SMS DETAILS ---" << endl;
         cout << "Sender ID: " << senderID << endl;
         cout << "Message: " << analyzerText << endl;
-    }
+        cout << "Received At: " << timeStamp << endl;
+    }
 };
 
 class KeywordMatcher : public virtual SMSAnalyzer {
@@ -279,4 +285,5 @@ int main() {
 
     return 0;
 }
+
 
