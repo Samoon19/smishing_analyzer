@@ -85,6 +85,48 @@ public:
     void analyze() override;
 };
 
+// LinkAnalyzer Implementation
+LinkAnalyzer::LinkAnalyzer(const string& content, const string& sender, const string& time)
+    : SMSAnalyzer(content, sender, time), suspiciousLinkCount(0) {}
+
+void LinkAnalyzer::loadSuspiciousDomains(const vector<string>& domains) {
+    suspiciousDomains = domains;
+}
+
+vector<string> LinkAnalyzer::extractLinks() {
+    extractedLinks.clear();
+    regex urlRegex(R"((https?:\/\/[^\s]+))", regex::icase);
+    smatch match;
+    string text = getSmsContent();
+
+    while (regex_search(text, match, urlRegex)) {
+        extractedLinks.push_back(match.str());
+        text = match.suffix().str();
+    }
+    return extractedLinks;
+}
+
+int LinkAnalyzer::analyzeLinks() {
+    suspiciousLinkCount = 0;
+    for (const auto& link : extractedLinks) {
+        for (const auto& domain : suspiciousDomains) {
+            if (link.find(domain) != string::npos) {
+                flaggedLinks.push_back(link);
+                suspiciousLinkCount++;
+            }
+        }
+    }
+    return suspiciousLinkCount;
+}
+
+void LinkAnalyzer::analyze() {
+    extractLinks();
+    int score = analyzeLinks();
+    setRiskScore(score * 3);  // weight suspicious links higher
+}
+
+
+
 // ================== Derived Class: SenderAnalyzer ================== //
 class SenderAnalyzer : public virtual SMSAnalyzer {
 protected:
@@ -99,6 +141,45 @@ public:
     void updateSenderReputation();
     void analyze() override;
 };
+
+// SenderAnalyzer Implementation
+SenderAnalyzer::SenderAnalyzer(const string& content, const string& sender, const string& time)
+    : SMSAnalyzer(content, sender, time),
+      isNumericSender(false), isGenericSender(false), senderReputation("Unknown") {}
+
+bool SenderAnalyzer::checkNumericSender() {
+    isNumericSender = !getSenderID().empty() &&
+                      all_of(getSenderID().begin(), getSenderID().end(), ::isdigit);
+    return isNumericSender;
+}
+
+bool SenderAnalyzer::checkGenericSender() {
+    string s = getSenderID();
+    for (char& c : s) c = toupper(c);
+
+    isGenericSender = (s == "INFO" || s == "ALERT" || s == "BANK" ||
+                       s == "SMS" || s == "NOTICE");
+    return isGenericSender;
+}
+
+void SenderAnalyzer::updateSenderReputation() {
+    if (isNumericSender)
+        senderReputation = "Suspicious (Numeric ID)";
+    else if (isGenericSender)
+        senderReputation = "Suspicious (Generic ID)";
+    else
+        senderReputation = "Likely Legitimate";
+}
+
+void SenderAnalyzer::analyze() {
+    int score = 0;
+    if (checkNumericSender()) score += 2;
+    if (checkGenericSender()) score += 2;
+
+    updateSenderReputation();
+    setRiskScore(score);
+}
+
 
 // ================== Multiple Derived Class: Reporter ================== //
 class Reporter : protected SenderAnalyzer,              protected LinkAnalyzer,
@@ -285,5 +366,6 @@ int main() {
 
     return 0;
 }
+
 
 
