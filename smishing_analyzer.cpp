@@ -3,9 +3,10 @@
 #include <vector>
 #include <map>
 #include <sstream>
-#include <regex>
 #include <ctime>
+#include <regex>
 #include <algorithm>
+#include <limits>
 using namespace std;
 
 // ================== Parent Class: SMS ================== //
@@ -140,7 +141,6 @@ int LinkAnalyzer::analyzeLinks() {
     }
     return suspiciousLinkCount;
 }
-
 void LinkAnalyzer::analyze() {
     extractLinks();
     int score = analyzeLinks();
@@ -203,7 +203,6 @@ void SenderAnalyzer::analyze() {
         cout << "Sender uses generic ID - SUSPICIOUS" << endl;
         score += 2;
     }
-
     updateSenderReputation();
     cout << "Sender reputation: " << senderReputation << endl;
     setRiskScore(score);
@@ -396,7 +395,7 @@ int main() {
         cout << "0. Exit\n";
         cout << "Choose: ";
         cin >> choice;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         switch(choice) {
             case 1:
@@ -428,7 +427,7 @@ int main() {
             break;
 
             case 0:
-                cout << "Goodbye!" << endl;
+                cout << "Goodbye! Stay safe from spam!" << endl;
                 break;
             default:
                 cout << "Invalid choice. Please try again." << endl;
@@ -437,3 +436,4 @@ int main() {
 
     return 0;
 }
+
