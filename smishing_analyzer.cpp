@@ -6,371 +6,346 @@
 #include <ctime>
 #include <regex>
 #include <algorithm>
-#include <limits>
 using namespace std;
 
-// ================== Parent Class: SMS ================== //
+// ================== Abstract Base Class: SMSAnalyzer ================== //
+// OOP Concept: Abstraction (pure virtual function)
+// Encapsulation: protected members with getters/setters
 class SMSAnalyzer {
 protected:
     string senderID;
     string analyzerText;
     string timeStamp;
-    int riskScore = 0;
+    int riskScore;
 
 public:
     SMSAnalyzer(string sender, string text, string time)
-    : senderID(sender), analyzerText(text), timeStamp(time) {}
+        : senderID(sender), analyzerText(text), timeStamp(time), riskScore(0) {}
+
+    virtual void analyze() = 0;  // Pure virtual → Abstraction & Polymorphism
+    virtual ~SMSAnalyzer() {}     // Virtual destructor ensures proper cleanup
 
     string getSenderID() const { return senderID; }
+    string getText() const { return analyzerText; }
     string getTimestamp() const { return timeStamp; }
-    string getAnalyzerText() const { return analyzerText; }
     int getRiskScore() const { return riskScore; }
     void setRiskScore(int score) { riskScore = score; }
-
-    void display() {
-        cout << "\n--- SMS DETAILS ---" << endl;
-        cout << "Sender ID: " << senderID << endl;
-        cout << "Message: " << analyzerText << endl;
-        cout << "Received At: " << timeStamp << endl;
-        cout << "Risk Score: " << riskScore << endl;
-    }
-     virtual ~SMSAnalyzer() = default; // Virtual destructor for proper cleanup
-     virtual void analyze() = 0;
 };
 
-
-// ================== Derived Class: KeywordMatcher ================== //
+// ================== KeywordMatcher ================== //
+// Inheritance: Derived class
+// Static members: Object count
 class KeywordMatcher : public virtual SMSAnalyzer {
-public:
+private:
     string keywords[30] = {
         "urgent", "win", "verify", "bank", "link", "password", "click", "lottery", "prize", "free",
         "limited", "offer", "account", "delivery", "failed", "update", "suspend", "confirm", "gift", "money",
         "credit", "debit", "insurance", "loan", "bonus", "investment", "otp", "transaction", "hacked", "security"
     };
+    static int objectCount; // Static member
 
+public:
     KeywordMatcher(string sender, string text, string time)
-        : SMSAnalyzer(sender, text, time) {}
+        : SMSAnalyzer(sender, text, time) { objectCount++; }
+
+    ~KeywordMatcher() override { objectCount--; } // Virtual destructor
+
+    static int getObjectCount() { return objectCount; }
 
     int checkKeywords() {
-        cout << "\nChecking for suspicious keywords..." << endl;
-        bool found = false;
         int count = 0;
-
         string lowerText = analyzerText;
         transform(lowerText.begin(), lowerText.end(), lowerText.begin(), ::tolower);
-
-        for (int i = 0; i < 30; i++) {
-            if (lowerText.find(keywords[i]) != string::npos) {
-                cout << "Found keyword: " << keywords[i] << endl;
-                found = true;
-                count++;
-            }
-        }
-
-        if (found) {
-            cout << "ALERT: " << count << " suspicious keyword(s) found!" << endl;
-        } else {
-            cout << "No suspicious keywords found." << endl;
-        }
+        for (const auto& kw : keywords)
+            if (lowerText.find(kw) != string::npos) count++;
         return count;
     }
 
-    void analyze() override {
-        int score = checkKeywords();
-        setRiskScore(score);
-    }
-};
+    void analyze() override { setRiskScore(getRiskScore() + checkKeywords()); }
 
-// ================== Derived Class: LinkAnalyzer ================== //
+    // Operator overloading
+    friend ostream& operator<<(ostream& os, KeywordMatcher& k) {
+        os << "Keywords Found: " << k.checkKeywords() << "\n";
+        return os;
+    }
+
+    // Friend function
+    friend void displayKeywords(KeywordMatcher& k);
+};
+int KeywordMatcher::objectCount = 0;
+
+void displayKeywords(KeywordMatcher& k) {
+    cout << "[Friend] Keywords in message: " << k.checkKeywords() << endl;
+}
+
+// ================== LinkAnalyzer ================== //
+// Inheritance: Derived class
+// Static members: Object count
 class LinkAnalyzer : public virtual SMSAnalyzer {
 protected:
     vector<string> suspiciousDomains;
     vector<string> extractedLinks;
-    vector<string> flaggedLinks; // Moved from global to class member
-    int suspiciousLinkCount;
+    static int objectCount;
 
 public:
-    LinkAnalyzer(string sender, string text, string time); // Fixed parameter order
-    void loadSuspiciousDomains(const vector<string>& domains);
-    vector<string> extractLinks();
-    int analyzeLinks();
-    void analyze() override;
-};
+    LinkAnalyzer(const string& sender, const string& text, const string& time)
+        : SMSAnalyzer(sender, text, time) { objectCount++; }
 
-// LinkAnalyzer Implementation
-LinkAnalyzer::LinkAnalyzer(string sender, string text, string time)
-    : SMSAnalyzer(sender, text, time), suspiciousLinkCount(0) {
-    // Load default suspicious domains
-    suspiciousDomains = {
-        "bit.ly", "tinyurl.com", "short.link", "suspicious-bank.com", 
-        "fake-lottery.net", "phishing-site.org", "malware-download.com"
-    };
-}
+    ~LinkAnalyzer() override { objectCount--; }
 
-void LinkAnalyzer::loadSuspiciousDomains(const vector<string>& domains) {
-    suspiciousDomains = domains;
-}
+    static int getObjectCount() { return objectCount; }
 
-vector<string> LinkAnalyzer::extractLinks() {
-    extractedLinks.clear();
-    regex urlRegex(R"((https?:\/\/[^\s]+))", regex::icase);
-    smatch match;
-    string text = getAnalyzerText();
+    void loadSuspiciousDomains(const vector<string>& domains) { suspiciousDomains = domains; }
 
-    while (regex_search(text, match, urlRegex)) {
-        extractedLinks.push_back(match.str());
-        text = match.suffix().str();
-    }
-    
-    cout << "\nFound " << extractedLinks.size() << " link(s) in message." << endl;
-    return extractedLinks;
-}
-
-int LinkAnalyzer::analyzeLinks() {
-    suspiciousLinkCount = 0;
-    flaggedLinks.clear();
-    
-    for (const auto& link : extractedLinks) {
-        for (const auto& domain : suspiciousDomains) {
-            if (link.find(domain) != string::npos) {
-                flaggedLinks.push_back(link);
-                suspiciousLinkCount++;
-                cout << "SUSPICIOUS LINK FOUND: " << link << endl;
-                break; // Avoid double-counting same link
-            }
+    vector<string> extractLinks() {
+        extractedLinks.clear();
+        regex urlRegex(R"((https?:\/\/[^\s]+))", regex::icase);
+        smatch match;
+        string text = analyzerText;
+        while (regex_search(text, match, urlRegex)) {
+            extractedLinks.push_back(match.str());
+            text = match.suffix().str();
         }
+        return extractedLinks;
     }
-    return suspiciousLinkCount;
-}
-void LinkAnalyzer::analyze() {
-    extractLinks();
-    int score = analyzeLinks();
-    setRiskScore(score * 3);  // weight suspicious links higher
+
+    int analyzeLinks() {
+        int count = 0;
+        for (const auto& link : extractedLinks)
+            for (const auto& domain : suspiciousDomains)
+                if (link.find(domain) != string::npos) count++;
+        return count;
+    }
+
+    void analyze() override { setRiskScore(getRiskScore() + analyzeLinks() * 3); }
+
+    // Operator overloading
+    friend ostream& operator<<(ostream& os, LinkAnalyzer& l) {
+        os << "Links found: " << l.extractedLinks.size() << "\n";
+        if (!l.extractedLinks.empty()) {
+            os << "Suspicious links: ";
+            for (auto& link : l.extractedLinks) os << link << " ";
+            os << "\n";
+        }
+        return os;
+    }
+
+    // Friend function
+    friend void displayLinks(LinkAnalyzer& l);
+};
+int LinkAnalyzer::objectCount = 0;
+
+void displayLinks(LinkAnalyzer& l) {
+    cout << "[Friend] Total suspicious links: " << l.analyzeLinks() << endl;
 }
 
-// ================== Derived Class: SenderAnalyzer ================== //
+// ================== SenderAnalyzer ================== //
+// Inheritance: Derived class
+// Static members: Object count
 class SenderAnalyzer : public virtual SMSAnalyzer {
 protected:
     bool isNumericSender;
     bool isGenericSender;
     string senderReputation;
+    static int objectCount;
 
 public:
-    SenderAnalyzer(string sender, string text, string time); // Fixed parameter order
-    bool checkNumericSender();
-    bool checkGenericSender();
-    void updateSenderReputation();
-    void analyze() override;
+    SenderAnalyzer(const string& sender, const string& text, const string& time)
+        : SMSAnalyzer(sender, text, time), isNumericSender(false), isGenericSender(false), senderReputation("Unknown") {
+        objectCount++;
+    }
+
+    ~SenderAnalyzer() override { objectCount--; }
+
+    static int getObjectCount() { return objectCount; }
+
+    bool checkNumericSender() {
+        isNumericSender = !senderID.empty() && all_of(senderID.begin(), senderID.end(), ::isdigit);
+        return isNumericSender;
+    }
+
+    bool checkGenericSender() {
+        string s = senderID;
+        for (char& c : s) c = toupper(c);
+        isGenericSender = (s == "INFO" || s == "ALERT" || s == "BANK" || s == "SMS" || s == "NOTICE");
+        return isGenericSender;
+    }
+
+    void updateSenderReputation() {
+        if (isNumericSender) senderReputation = "Suspicious (Numeric ID)";
+        else if (isGenericSender) senderReputation = "Suspicious (Generic ID)";
+        else senderReputation = "Likely Legitimate";
+    }
+
+    void analyze() override {
+        int score = 0;
+        if (checkNumericSender()) score += 2;
+        if (checkGenericSender()) score += 2;
+        updateSenderReputation();
+        setRiskScore(getRiskScore() + score);
+    }
+
+    string getReputation() const { return senderReputation; }
+
+    // Operator overloading
+    friend ostream& operator<<(ostream& os, SenderAnalyzer& s) {
+        os << "Sender: " << s.senderID << " | Reputation: " << s.senderReputation << "\n";
+        return os;
+    }
+
+    // Friend function
+    friend void displaySender(SenderAnalyzer& s);
 };
+int SenderAnalyzer::objectCount = 0;
 
-// SenderAnalyzer Implementation
-SenderAnalyzer::SenderAnalyzer(string sender, string text, string time)
-    : SMSAnalyzer(sender, text, time),
-      isNumericSender(false), isGenericSender(false), senderReputation("Unknown") {}
-
-bool SenderAnalyzer::checkNumericSender() {
-    isNumericSender = !getSenderID().empty() &&
-                      all_of(getSenderID().begin(), getSenderID().end(), ::isdigit);
-    return isNumericSender;
+void displaySender(SenderAnalyzer& s) {
+    cout << "[Friend] Sender Reputation: " << s.senderReputation << endl;
 }
 
-bool SenderAnalyzer::checkGenericSender() {
-    string s = getSenderID();
-    transform(s.begin(), s.end(), s.begin(), ::toupper);
+// ================== Reporter ================== //
+// Multiple Inheritance: combines all analyzers
+// Operator overloading and friend class
+class UserFeedback;
 
-    isGenericSender = (s == "INFO" || s == "ALERT" || s == "BANK" ||
-                       s == "SMS" || s == "NOTICE");
-    return isGenericSender;
-}
-
-void SenderAnalyzer::updateSenderReputation() {
-    if (isNumericSender)
-        senderReputation = "Suspicious (Numeric ID)";
-    else if (isGenericSender)
-        senderReputation = "Suspicious (Generic ID)";
-    else
-        senderReputation = "Likely Legitimate";
-}
-
-void SenderAnalyzer::analyze() {
-    int score = 0;
-    cout << "\nAnalyzing sender: " << getSenderID() << endl;
-    
-    if (checkNumericSender()) {
-        cout << "Sender uses numeric ID - SUSPICIOUS" << endl;
-        score += 2;
-    }
-    if (checkGenericSender()) {
-        cout << "Sender uses generic ID - SUSPICIOUS" << endl;
-        score += 2;
-    }
-    updateSenderReputation();
-    cout << "Sender reputation: " << senderReputation << endl;
-    setRiskScore(score);
-}
-
-// ================== Multiple Derived Class: Reporter ================== //
-// ================== Multiple Derived Class: Reporter ================== //
-class Reporter : protected SenderAnalyzer,
-                 protected LinkAnalyzer,
-                 protected KeywordMatcher {
+class Reporter : public SenderAnalyzer, public LinkAnalyzer, public KeywordMatcher {
 protected:
     string reportFormat;
     string analysisSummary;
     map<string, int> componentScores;
+    static int reportCount;
 
 public:
-    Reporter(string sender, string text, string time); 
-    void setReportFormat(const string& format);
-    string generateReport() const;
-    void displayReport() const;  // fixed: stays void
-    void collectScores(int keywordScore, int linkScore, int senderScore);
-    void analyze() override;
+    Reporter(const string& sender, const string& text, const string& time)
+        : SMSAnalyzer(sender, text, time), SenderAnalyzer(sender, text, time),
+          LinkAnalyzer(sender, text, time), KeywordMatcher(sender, text, time),
+          reportFormat("TEXT"), analysisSummary("") {
+        reportCount++;
+    }
+
+    ~Reporter() override { cout << "[Destructor] Reporter object destroyed.\n"; }
+
+    static int getReportCount() { return reportCount; }
+
+    void setReportFormat(const string& format) { reportFormat = format; }
+
+    void collectScores(int keywordScore, int linkScore, int senderScore) {
+        componentScores["Keyword"] = keywordScore;
+        componentScores["Link"] = linkScore;
+        componentScores["Sender"] = senderScore;
+        setRiskScore(keywordScore + linkScore + senderScore);
+    }
+
+    string generateReport() const {
+        ostringstream report;
+        if (reportFormat == "JSON") {
+            report << "{\n"
+                   << "  \"SenderID\": \"" << getSenderID() << "\",\n"
+                   << "  \"Timestamp\": \"" << getTimestamp() << "\",\n"
+                   << "  \"RiskScore\": " << getRiskScore() << ",\n"
+                   << "  \"ComponentScores\": {\n"
+                   << "    \"Keyword\": " << componentScores.at("Keyword") << ",\n"
+                   << "    \"Link\": " << componentScores.at("Link") << ",\n"
+                   << "    \"Sender\": " << componentScores.at("Sender") << "\n"
+                   << "  },\n"
+                   << "  \"Summary\": \"" << analysisSummary << "\"\n"
+                   << "}";
+        } else if (reportFormat == "CSV") {
+            report << "SenderID,Timestamp,RiskScore,KeywordScore,LinkScore,SenderScore,Summary\n";
+            report << getSenderID() << "," << getTimestamp() << "," << getRiskScore() << ","
+                   << componentScores.at("Keyword") << "," << componentScores.at("Link") << ","
+                   << componentScores.at("Sender") << ",\"" << analysisSummary << "\"\n";
+        } else {
+            report << "=== SMS Security Report ===\n";
+            report << "Sender: " << getSenderID() << "\n";
+            report << "Time: " << getTimestamp() << "\n";
+            report << "Risk Score: " << getRiskScore() << "\n";
+            report << "Keyword Score: " << componentScores.at("Keyword") << "\n";
+            report << "Link Score: " << componentScores.at("Link") << "\n";
+            report << "Sender Score: " << componentScores.at("Sender") << "\n";
+            report << "Summary: " << analysisSummary << "\n";
+        }
+        return report.str();
+    }
+
+    void analyze() override {
+        int keywordScore = KeywordMatcher::checkKeywords();
+        LinkAnalyzer::extractLinks();
+        int linkScore = LinkAnalyzer::analyzeLinks();
+        bool isNumeric = SenderAnalyzer::checkNumericSender();
+        bool isGeneric = SenderAnalyzer::checkGenericSender();
+        int senderScore = (isNumeric ? 2 : 0) + (isGeneric ? 2 : 0);
+        collectScores(keywordScore, linkScore, senderScore);
+        ostringstream summary;
+        summary << "Message from " << getSenderID()
+                << " scored " << getRiskScore() << " risk points.";
+        analysisSummary = summary.str();
+    }
+
+    friend ostream& operator<<(ostream& os, const Reporter& r) {
+        os << r.generateReport();
+        return os;
+    }
+
+    friend class UserFeedback; // Friend class
+};
+int Reporter::reportCount = 0;
+
+// ================== UserFeedback ================== //
+// Friend class access
+class UserFeedback {
+public:
+    void recordFeedback(const Reporter& r, bool userJudgment) {
+        cout << "\n[Feedback] System predicted risk score: " << r.riskScore
+             << " | User says spam = " << (userJudgment ? "Yes" : "No") << endl;
+    }
 };
 
-// Reporter Implementation
-Reporter::Reporter(string sender, string text, string time)
-    : SMSAnalyzer(sender, text, time),
-      SenderAnalyzer(sender, text, time),
-      LinkAnalyzer(sender, text, time),
-      KeywordMatcher(sender, text, time),
-      reportFormat("TEXT"), analysisSummary("") {}
-
-void Reporter::setReportFormat(const string& format) {
-    reportFormat = format;
-}
-
-void Reporter::collectScores(int keywordScore, int linkScore, int senderScore) {
-    componentScores["Keyword"] = keywordScore;
-    componentScores["Link"] = linkScore;
-    componentScores["Sender"] = senderScore;
-
-    int total = keywordScore + linkScore + senderScore;
-    setRiskScore(total);
-}
-
-string Reporter::generateReport() const {
-    ostringstream report;
-
-    if (reportFormat == "JSON") {
-        report << "{\n"
-               << "  \"SenderID\": \"" << getSenderID() << "\",\n"
-               << "  \"Timestamp\": \"" << getTimestamp() << "\",\n"
-               << "  \"RiskScore\": " << getRiskScore() << ",\n"
-               << "  \"ComponentScores\": {\n"
-               << "    \"Keyword\": " << componentScores.at("Keyword") << ",\n"
-               << "    \"Link\": " << componentScores.at("Link") << ",\n"
-               << "    \"Sender\": " << componentScores.at("Sender") << "\n"
-               << "  },\n"
-               << "  \"Summary\": \"" << analysisSummary << "\"\n"
-               << "}";
-    } else if (reportFormat == "CSV") {
-        report << "SenderID,Timestamp,RiskScore,KeywordScore,LinkScore,SenderScore,Summary\n";
-        report << getSenderID() << ","
-               << getTimestamp() << ","
-               << getRiskScore() << ","
-               << componentScores.at("Keyword") << ","
-               << componentScores.at("Link") << ","
-               << componentScores.at("Sender") << ","
-               << "\"" << analysisSummary << "\"\n";
-    } else {
-        report << "=== SMS Security Report ===\n";
-        report << "Sender: " << getSenderID() << "\n";
-        report << "Time: " << getTimestamp() << "\n";
-        report << "Risk Score: " << getRiskScore() << "\n";
-        report << "Keyword Score: " << componentScores.at("Keyword") << "\n";
-        report << "Link Score: " << componentScores.at("Link") << "\n";
-        report << "Sender Score: " << componentScores.at("Sender") << "\n";
-        report << "Summary: " << analysisSummary << "\n";
-    }
-    return report.str();
-}
-
-void Reporter::displayReport() const {
-    cout << generateReport() << endl;
-}
-
-void Reporter::analyze() {
-    cout << "\n=== STARTING SMS ANALYSIS ===" << endl;
-    
-    // Perform individual analyses
-    int keywordScore = KeywordMatcher::checkKeywords();
-    
-    LinkAnalyzer::extractLinks();
-    int linkScore = LinkAnalyzer::analyzeLinks();
-    
-    bool isNumeric = SenderAnalyzer::checkNumericSender();
-    bool isGeneric = SenderAnalyzer::checkGenericSender();
-    SenderAnalyzer::updateSenderReputation();
-    
-    int senderScore = (isNumeric ? 2 : 0) + (isGeneric ? 2 : 0);
-
-    collectScores(keywordScore, linkScore, senderScore);
-
-    // Generate summary
-    ostringstream summary;
-    summary << "Message from " << getSenderID()
-            << " scored " << getRiskScore() << " risk points. ";
-    
-    if (getRiskScore() >= 7) {
-        summary << "HIGH RISK - Likely spam/phishing.";
-    } else if (getRiskScore() >= 4) {
-        summary << "MEDIUM RISK - Suspicious content detected.";
-    } else {
-        summary << "LOW RISK - Appears legitimate.";
-    }
-    
-    analysisSummary = summary.str();
-    cout << "\n" << analysisSummary << endl;
-}
-
-
-// ================== EncryptionModule ================== //
+// ================== Encryption Module ================== //
+// Fixed Caesar Cipher
 class EncryptionModule {
 protected:
     string encryptionKey;
     string algorithmType;
 
 public:
-    EncryptionModule(const string& key, const string& algo);
-    virtual string encrypt(const string& plainText);
-    virtual string decrypt(const string& cipherText);
-    virtual ~EncryptionModule() = default;
+    EncryptionModule(const string& key, const string& algo)
+        : encryptionKey(key), algorithmType(algo) {}
+
+    string encrypt(const string& plainText) {
+        string result = plainText;
+        int shift = encryptionKey.length() % 26;
+        for (char& c : result) {
+            if (isalpha(c)) {
+                char base = isupper(c) ? 'A' : 'a';
+                c = ((c - base + shift) % 26) + base;
+            }
+        }
+        return result;
+    }
+
+    string decrypt(const string& cipherText) {
+        string result = cipherText;
+        int shift = encryptionKey.length() % 26;
+        for (char& c : result) {
+            if (isalpha(c)) {
+                char base = isupper(c) ? 'A' : 'a';
+                c = ((c - base - shift + 26) % 26) + base;
+            }
+        }
+        return result;
+    }
+
+    friend void encryptionStats(EncryptionModule& e);
 };
 
-// EncryptionModule Implementation
-EncryptionModule::EncryptionModule(const string& key, const string& algo)
-    : encryptionKey(key), algorithmType(algo) {}
-
-string EncryptionModule::encrypt(const string& plainText) {
-    string result = plainText;
-    int shift = encryptionKey.length() % 26;
-    for (char& c : result) {
-        if (isalpha(c)) {
-            char base = isupper(c) ? 'A' : 'a';
-            c = (c - base + shift) % 26 + base;
-        }
-    }
-    return result;
+void encryptionStats(EncryptionModule& e) {
+    cout << "[Friend] Encryption key: " << e.encryptionKey
+         << " | Algorithm: " << e.algorithmType << endl;
 }
 
-string EncryptionModule::decrypt(const string& cipherText) {
-    string result = cipherText;
-    int shift = encryptionKey.length() % 26;
-    for (char& c : result) {
-        if (isalpha(c)) {
-            char base = isupper(c) ? 'A' : 'a';
-            c = (c - base - shift + 26) % 26 + base;
-        }
-    }
-    return result;
-}
-
-// ================== Main Menu ================== //
+// ================== MAIN ================== //
 int main() {
     string content, sender, time;
-    
-    cout << "=== SMS Security Analyzer ===" << endl;
     cout << "Enter SMS content: ";
     getline(cin, content);
     cout << "Enter Sender ID: ";
@@ -378,15 +353,14 @@ int main() {
     cout << "Enter Timestamp: ";
     getline(cin, time);
 
-    // Create reporter with corrected parameter order
     Reporter reporter(sender, content, time);
-
-    // Perform analysis
+    vector<string> domains = {"phish.com", "malware.net", "fakebank.org"};
+    reporter.loadSuspiciousDomains(domains);
     reporter.analyze();
 
-    // Create encryption module
     EncryptionModule crypto("mySecretKey", "Caesar");
-    string lastEncrypted;
+    UserFeedback feedback;
+
     int choice;
     do {
         cout << "\n===== MAIN MENU =====\n";
@@ -395,45 +369,40 @@ int main() {
         cout << "3. Show Report (CSV)\n";
         cout << "4. Encrypt Report\n";
         cout << "5. Decrypt Report\n";
+        cout << "6. Give Feedback\n";
+        cout << "7. Show Report Count\n";
+        cout << "8. Show Friend Details\n";
+        cout << "9. Show Analyzer Object Counts\n";
         cout << "0. Exit\n";
         cout << "Choose: ";
         cin >> choice;
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cin.ignore();
 
-        switch(choice) {
-            case 1:
-                reporter.setReportFormat("TEXT");
-                cout << "\n" << reporter.generateReport() << endl;
-                break;
-            case 2:
-                reporter.setReportFormat("JSON");
-                cout << "\n" << reporter.generateReport() << endl;
-                break;
-            case 3:
-                reporter.setReportFormat("CSV");
-                cout << "\n" << reporter.generateReport() << endl;
-                break;
-            
-
-            case 4:
-                reporter.setReportFormat("TEXT");
-                lastEncrypted = crypto.encrypt(reporter.generateReport());
-                cout << "\nEncrypted Report:\n" << lastEncrypted << endl;
-                break;
-            case 5:
-                if (!lastEncrypted.empty()) {
-                    cout << "\nDecrypted Report:\n" << crypto.decrypt(lastEncrypted) << endl;
-                } 
-                else {
-                    cout << "\nNo encrypted report found!\n";
-                }
-            break;
-
-            case 0:
-                cout << "Goodbye! Stay safe from spam!" << endl;
-                break;
-            default:
-                cout << "Invalid choice. Please try again." << endl;
+        if (choice == 1) { reporter.setReportFormat("TEXT"); cout << reporter << endl; }
+        else if (choice == 2) { reporter.setReportFormat("JSON"); cout << reporter << endl; }
+        else if (choice == 3) { reporter.setReportFormat("CSV"); cout << reporter << endl; }
+        else if (choice == 4) { 
+            string enc = crypto.encrypt(reporter.generateReport());
+            cout << "Encrypted Report:\n" << enc << endl;
+        }
+        else if (choice == 5) { 
+            string enc = crypto.encrypt(reporter.generateReport()); // encrypt first to test decrypt
+            string dec = crypto.decrypt(enc);
+            cout << "Decrypted Report:\n" << dec << endl;
+        }
+        else if (choice == 6) { 
+            bool userJudgment; 
+            cout << "Do you think this SMS is spam? (1=Yes, 0=No): "; 
+            cin >> userJudgment; 
+            feedback.recordFeedback(reporter, userJudgment);
+        }
+        else if (choice == 7) { cout << "Total reports generated: " << Reporter::getReportCount() << endl; }
+        else if (choice == 8) { displayKeywords(reporter); displayLinks(reporter); displaySender(reporter); encryptionStats(crypto); }
+        else if (choice == 9) { 
+            cout << "KeywordMatcher objects: " << KeywordMatcher::getObjectCount() 
+                 << "\nLinkAnalyzer objects: " << LinkAnalyzer::getObjectCount() 
+                 << "\nSenderAnalyzer objects: " << SenderAnalyzer::getObjectCount() 
+                 << "\nReporter objects: " << Reporter::getReportCount() << endl; 
         }
     } while (choice != 0);
 
