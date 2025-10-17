@@ -1,95 +1,66 @@
-# SMISHING ANALYZER 🚨
+# Smishing Analyzer (Java-based SMS Phishing Detection System)
 
-A fun and functional C++ program to sniff out spammy, phishing, or shady SMS messages before they bite!
+## Overview
+Smishing Analyzer is a Java-based application designed to detect and analyze potentially malicious SMS messages. The system combines encryption, keyword detection, link analysis, sender evaluation, and reporting functionality to provide a comprehensive SMS phishing detection solution.
 
----
+## Features
+- **Keyword Matching:** Detect suspicious words or phrases in SMS messages.
+- **Link Analysis:** Check URLs against known malicious domains.
+- **Sender Evaluation:** Assess sender credibility based on historical data.
+- **Encryption:** Secure storage and processing of messages.
+- **Reporting:** Generate detailed analysis reports.
+- **User Feedback:** Collect feedback to improve detection accuracy.
+- **Firebase Integration:** Store messages and analysis results centrally.
 
-## 🌟 Features
+## Technology Stack
+- Java 8+
+- Firebase Realtime Database
+- Java Encryption libraries
 
-* **Keyword Detective**: Finds spammy keywords like `win`, `prize`, `urgent`, `bank`, etc.
-* **Link Hunter**: Extracts links and flags suspicious domains.
-* **Sender Sleuth**: Detects numeric or generic senders and assigns a reputation.
-* **Risk Score**: Calculates a risk score based on content, links, and sender.
-* **Multi-format Reports**: TEXT, JSON, CSV—your choice!
-* **Report History**: Peek at past reports anytime.
-* **Encryption/Decryption**: Caesar cipher keeps your reports "safe".
-* **User Feedback**: Let the system know if it nailed spam detection.
+## Project Structure
+- **Main.java:** Entry point of the application.
+- **SmsAnalyzer.java:** Core analysis engine integrating all modules.
+- **EncryptionModule.java:** Handles encryption of message data.
+- **FirebaseManager.java:** Firebase database operations.
+- **KeywordMatcher.java:** Suspicious keyword detection.
+- **LinkAnalyzer.java:** Malicious URL detection.
+- **SenderAnalyzer.java:** Sender credibility evaluation.
+- **Reporter.java:** Generates structured analysis reports.
+- **UserFeedback.java:** User feedback collection.
+- **LICENSE:** Open-source license information.
+- **README.md:** Project documentation.
+- **research_articles.md:** References used in project research.
 
----
+## Setup & Installation
+1. Clone the repository:
+   ```bash
+   git clone <repository_url>
+   ```
+2. Ensure Java 8+ is installed.
+3. Set up Firebase and update the configuration in `FirebaseManager.java`.
+4. Compile the project:
+   ```bash
+   javac *.java
+   ```
+5. Run the application:
+   ```bash
+   java Main
+   ```
 
-## 🛠 Classes
+## Usage
+1. Input the SMS message when prompted.
+2. The system will analyze for keywords, links, and sender credibility.
+3. Analysis report will be displayed and stored in Firebase.
+4. Optionally, provide user feedback to refine detection.
 
-* `SMSAnalyzer`: Abstract base class for SMS analysis.
-* `KeywordMatcher`: Scans for suspicious keywords.
-* `LinkAnalyzer`: Extracts and evaluates links.
-* `SenderAnalyzer`: Checks sender type and reputation.
-* `Reporter`: Combines all analyses and generates multi-format reports.
-* `EncryptionModule`: Caesar cipher encryption/decryption.
-* `UserFeedback`: Records user judgments.
+## Sample Output
+- Flagged keywords: "urgent", "verify account"
+- Malicious links detected: https://malicious.example.com
+- Sender credibility: Low
+- Report generated: `report_20251017.docx`
 
----
+## Contribution
+Contributions are welcome. Please fork the repository and submit pull requests.
 
-## 🚀 How to Run
-
-1. Compile:
-
-```bash
-g++ smishing_analyzer.cpp -o SMSAnalyzer -std=c++17
-```
-
-2. Run:
-
-```bash
-./SMSAnalyzer
-```
-
-3. Follow the main menu to create reports, encrypt/decrypt, save, and provide feedback.
-
----
-
-## 🎛 Main Menu
-
-```
-========================================
-||           MAIN MENU                 ||
-========================================
-|| 1. Create New Report                ||
-|| 2. Show Latest Report (TEXT)        ||
-|| 3. Show Latest Report (JSON)        ||
-|| 4. Show Latest Report (CSV)         ||
-|| 5. Encrypt Latest Report            ||
-|| 6. Decrypt Last Encrypted Report    ||
-|| 7. Save Latest Report to File       ||
-|| 8. View Past Reports                ||
-|| 9. User Feedback                    ||
-|| 0. Exit                             ||
-========================================
-Choose: 
-```
-
----
-
-## 📝 Workflow Example
-
-1. Input SMS content, sender ID, timestamp.
-2. System analyzes keywords, links, and sender.
-3. Generates and displays the risk report.
-4. Encrypt, decrypt, or save reports as needed.
-5. Provide user feedback for system improvement.
-
----
-
-## ⚠ Notes
-
-* OOP concepts: **inheritance**, **polymorphism**, **encapsulation**, **friend classes**.
-* Caesar cipher is for demo purposes only.
-* Suspicious domains list is customizable in `LinkAnalyzer`.
-
----
-
-Made with ❤️ and a pinch of paranoia to keep your SMS safe!
-
-🌟Collaborators🌟:
-- Heena Farheen Kolimi
-- A Salai Neranjana
-- Samridhi Rauthan
+## License
+Refer to LICENSE file for licensing information.
